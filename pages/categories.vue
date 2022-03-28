@@ -1,5 +1,6 @@
 <template>
   <div>
+    <!-- {{categories}} -->
     <div class="flex items-center justify-between">
       <h1 class="font-bold text-2xl">
         Categorias
@@ -10,10 +11,10 @@
       <div>
         <div class="flex items-center space-x-3">
           <div>
-            <AppFormInput />
+            <AppFormInput v-model="name" @keyup.enter="createCategory" />
           </div>
 
-          <AppButton>
+          <AppButton @click="createCategory">
             Adicionar
           </AppButton>
         </div>
@@ -59,21 +60,33 @@
           </td>
         </tr>
 
-        <tr class="bg-white">
-          <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-            Categoria 2
+        <tr 
+          class="bg-white"
+          v-for="category in categories"
+          :key="category.id"
+        >
+          <td  class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+            
+            <div v-if="category.is_updating">
+              <AppFormInput v-model="category.name" @keydown.enter="updateCategory(category)" />
+            </div>
+            <template v-else>
+                {{category.name}}                
+            </template>
           </td>
 
           <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-4">
             <a
               href="#"
               class="text-indigo-600 hover:text-indigo-900"
+              @click.stop.prevent="startUpdating(category)"
             >Edit
             </a>
 
             <a
               href="#"
               class="text-red-600 hover:text-red-900"
+              @click.stop.prevent="deleteCategory(category.id)"
             >Excluir
             </a>
           </td>
@@ -99,9 +112,46 @@ export default {
   },
 
   data() {
-    return {};
+    return {
+      name:''
+    };
   },
-
-  methods: {},
+  async asyncData({ store }){
+    return {
+      categories: await store.dispatch('categories/getCategories').then((response) => response.map(obj => ({...obj, is_updating:false})))
+    }
+  },
+  methods: {
+    deleteCategory(id){      
+      this.$store.dispatch(
+        'categories/deleteCategory',
+        id
+      ).then(response => {
+        const index = this.categories.find(c => c.id === id)
+          this.categories.splice(index,1)
+      })
+    },
+    startUpdating(category){
+      category.is_updating= true;
+    },
+    updateCategory(category){
+      this.$store.dispatch(
+        'categories/updateCategory',
+        {
+          data:{name:category.name},
+          id:category.id
+        }
+      ).then(response => (category.is_updating=false))
+    },
+    createCategory(){
+      const data = {name:this.name}
+      this.$store.dispatch(
+        'categories/addCategory',
+        data
+      ).then(response => {
+        this.categories.push(response)
+      })
+    }
+  },
 };
 </script>
